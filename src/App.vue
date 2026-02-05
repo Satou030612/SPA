@@ -1,6 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
+// Bug 1 の修正: selectedStore のデフォルト値が stores 配列に存在するようにする
+// fetchData から取得するストアに依存するため、初期値は空のままにし、fetchData で初期化する
+
 const items = ref([])
 const stores = ref([])
 const newItemName = ref('')
@@ -79,6 +82,10 @@ async function addItem() {
     }
   }
 
+  // Bug 2 修正: 既存の ID の最大値 + 1 を使用して新しい ID を生成
+  const maxId = items.value.reduce((max, item) => Math.max(max, item.id), 0);
+  const newId = maxId + 1;
+
   try {
     const res = await fetch(`/api?action=addItem`, {
       method: 'POST',
@@ -86,6 +93,7 @@ async function addItem() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
+        id: newId, // ユニークな ID を使用
         name: newItemName.value.trim(),
         store: storeToAdd
       })
