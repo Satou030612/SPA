@@ -1,19 +1,15 @@
 <script setup>
-import { ref, computed } from 'vue'
-import myset from './assets/myset.json'
+import { ref, computed, onMounted } from 'vue'
 
-const defaultStores = myset.store || []
-const items = ref([
-  { id: 1, name: '牛乳', store: defaultStores[0] || 'ストアA', purchased: false },
-  { id: 2, name: 'パン', store: defaultStores[1] || 'ストアB', purchased: true },
-  { id: 3, name: '卵', store: defaultStores[0] || 'ストアA', purchased: false }
-])
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzijHcy9531MASML6qEpaYr24eHFsZN2lKTuvtYhRgnXQEtChzMTF7fJdotjoa3Dqj8iw/exec'; // ここにWebアプリのURLを設定
 
-const stores = ref([...defaultStores, '新規ストアを追加...'])
+const items = ref([])
+const stores = ref([])
 const newItemName = ref('')
-const selectedStore = ref(defaultStores[0] || 'ストアA')
+const selectedStore = ref('')
 const newStoreName = ref('')
 const filterStore = ref('すべて')
+const isLoading = ref(true)
 
 const filteredItems = computed(() => {
   if (filterStore.value === 'すべて') {
@@ -23,40 +19,139 @@ const filteredItems = computed(() => {
   }
 })
 
-function addItem() {
-  if (newItemName.value.trim() === '') return
+async function fetchData() {
+  isLoading.value = true;
+  try {
+    const [itemsRes, storesRes] = await Promise.all([
+      fetch(`${GAS_WEB_APP_URL}?action=getItems`),
+      fetch(`${GAS_WEB_APP_URL}?action=getStores`)
+    ]);
 
-  let storeToAdd = selectedStore.value
+    const itemsData = await itemsRes.json();
+    const storesData = await storesRes.json();
+
+    items.value = itemsData.items || [];
+    stores.value = [...(storesData.stores || []), '新規ストアを追加...'];
+
+    if (stores.value.length > 0) {
+      selectedStore.value = stores.value[0];
+    }
+  } catch (error) {
+    console.error('データの取得に失敗しました:', error);
+    alert('データの読み込み中にエラーが発生しました。');
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+onMounted(fetchData);
+
+async function addItem() {
+  if (newItemName.value.trim() === '') {
+    alert('新しい品目を入力してください。');
+    return;
+  }
+
+  let storeToAdd = selectedStore.value;
   if (selectedStore.value === '新規ストアを追加...') {
     if (newStoreName.value.trim() === '') {
-      alert('新しいストア名を入力してください。')
-      return
+      alert('新しいストア名を入力してください。');
+      return;
     }
-    storeToAdd = newStoreName.value.trim()
-    if (!stores.value.includes(storeToAdd)) {
-      stores.value.splice(stores.value.length - 1, 0, storeToAdd)
+    try {
+      const res = await fetch(`${GAS_WEB_APP_URL}?action=addStore`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ storeName: newStoreName.value.trim() })
+      });
+      const result = await res.json();
+      if (result.success) {
+        storeToAdd = result.storeName;
+        await fetchData();
+      } else {
+        alert('ストアの追加に失敗しました: ' + result.error);
+        return;
+      }
+    } catch (error) {
+      console.error('ストアの追加中にエラーが発生しました:', error);
+      alert('ストアの追加中にエラーが発生しました。');
+      return;
     }
   }
 
-  items.value.push({
-    id: items.value.length + 1,
-    name: newItemName.value.trim(),
-    store: storeToAdd,
-    purchased: false
-  })
-  newItemName.value = ''
-  newStoreName.value = ''
+  try {
+    const res = await fetch(`${GAS_WEB_APP_URL}?action=addItem`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        name: newItemName.value.trim(),
+        store: storeToAdd
+      })
+    });
+    const result = await res.json();
+    if (result.success) {
+      newItemName.value = '';
+      newStoreName.value = '';
+      await fetchData();
+    } else {
+      alert('品目の追加に失敗しました: ' + result.error);
+    }
+  } catch (error) {
+    console.error('品目の追加中にエラーが発生しました:', error);
+    alert('品目の追加中にエラーが発生しました。');
+  }
 }
 
-function togglePurchased(id) {
-  const item = items.value.find(item => item.id === id)
+async function togglePurchased(id) {
+  const item = items.value.find(item => item.id === id);
   if (item) {
-    item.purchased = !item.purchased
+    try {
+      const res = await fetch(`${GAS_WEB_APP_URL}?action=updateItem`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          id: item.id,
+          purchased: !item.purchased
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        await fetchData(); // 購入ステータス変更後、データを再取得して最新の状態を反映
+      } else {
+        alert('品目の更新に失敗しました: ' + result.error);
+      }
+    } catch (error) {
+      console.error('品目の更新中にエラーが発生しました:', error);
+      alert('品目の更新中にエラーが発生しました。');
+    }
   }
 }
 
-function removeItem(id) {
-  items.value = items.value.filter(item => item.id !== id)
+async function removeItem(id) {
+  try {
+    const res = await fetch(`${GAS_WEB_APP_URL}?action=deleteItem`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ id: id })
+    });
+    const result = await res.json();
+    if (result.success) {
+      await fetchData(); // 削除後、データを再取得して最新の状態を反映
+    } else {
+      alert('品目の削除に失敗しました: ' + result.error);
+    }
+  } catch (error) {
+    console.error('品目の削除中にエラーが発生しました:', error);
+    alert('品目の削除中にエラーが発生しました。');
+  }
 }
 </script>
 
@@ -91,7 +186,8 @@ function removeItem(id) {
       </select>
     </div>
 
-    <ul class="shopping-list">
+    <p v-if="isLoading">データを読み込み中...</p>
+    <ul v-else class="shopping-list">
       <li v-for="item in filteredItems" :key="item.id" :class="{ purchased: item.purchased }">
         <input
           type="checkbox"
