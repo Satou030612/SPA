@@ -1,8 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzijHcy9531MASML6qEpaYr24eHFsZN2lKTuvtYhRgnXQEtChzMTF7fJdotjoa3Dqj8iw/exec'; // ここにWebアプリのURLを設定
-
 const items = ref([])
 const stores = ref([])
 const newItemName = ref('')
@@ -23,8 +21,8 @@ async function fetchData() {
   isLoading.value = true;
   try {
     const [itemsRes, storesRes] = await Promise.all([
-      fetch(`${GAS_WEB_APP_URL}?action=getItems`),
-      fetch(`${GAS_WEB_APP_URL}?action=getStores`)
+      fetch(`/api?action=getItems`),
+      fetch(`/api?action=getStores`)
     ]);
 
     const itemsData = await itemsRes.json();
@@ -59,7 +57,7 @@ async function addItem() {
       return;
     }
     try {
-      const res = await fetch(`${GAS_WEB_APP_URL}?action=addStore`, {
+      const res = await fetch(`/api?action=addStore`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -82,7 +80,7 @@ async function addItem() {
   }
 
   try {
-    const res = await fetch(`${GAS_WEB_APP_URL}?action=addItem`, {
+    const res = await fetch(`/api?action=addItem`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -110,7 +108,7 @@ async function togglePurchased(id) {
   const item = items.value.find(item => item.id === id);
   if (item) {
     try {
-      const res = await fetch(`${GAS_WEB_APP_URL}?action=updateItem`, {
+      const res = await fetch(`/api?action=updateItem`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -122,7 +120,7 @@ async function togglePurchased(id) {
       });
       const result = await res.json();
       if (result.success) {
-        await fetchData(); // 購入ステータス変更後、データを再取得して最新の状態を反映
+        await fetchData();
       } else {
         alert('品目の更新に失敗しました: ' + result.error);
       }
@@ -135,7 +133,7 @@ async function togglePurchased(id) {
 
 async function removeItem(id) {
   try {
-    const res = await fetch(`${GAS_WEB_APP_URL}?action=deleteItem`, {
+    const res = await fetch(`/api?action=deleteItem`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -144,7 +142,7 @@ async function removeItem(id) {
     });
     const result = await res.json();
     if (result.success) {
-      await fetchData(); // 削除後、データを再取得して最新の状態を反映
+      await fetchData();
     } else {
       alert('品目の削除に失敗しました: ' + result.error);
     }
