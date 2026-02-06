@@ -64,7 +64,7 @@ async function addItem() {
       const res = await fetch(`${apiUrl.value}?action=addStore`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'text/plain', // 'application/json'から変更
         },
         body: JSON.stringify({ storeName: newStoreName.value.trim() })
       });
@@ -91,7 +91,7 @@ async function addItem() {
     const res = await fetch(`${apiUrl.value}?action=addItem`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/plain', // 'application/json'から変更
       },
       body: JSON.stringify({
         id: newId, // ユニークな ID を使用
@@ -120,14 +120,15 @@ async function togglePurchased(id) {
       const res = await fetch(`${apiUrl.value}?action=updateItem`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'text/plain', // 'application/json'から変更
         },
         body: JSON.stringify({
           id: item.id,
           purchased: !item.purchased
         })
       });
-      const result = await res.json();
+      const resResult = await res;
+      const result = await resResult.json();
       if (result.success) {
         await fetchData();
       } else {
@@ -145,7 +146,7 @@ async function removeItem(id) {
     const res = await fetch(`${apiUrl.value}?action=deleteItem`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/plain', // 'application/json'から変更
       },
       body: JSON.stringify({ id: id })
     });
