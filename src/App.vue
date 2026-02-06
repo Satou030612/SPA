@@ -4,6 +4,7 @@ import { ref, computed, onMounted } from 'vue'
 // Bug 1 の修正: selectedStore のデフォルト値が stores 配列に存在するようにする
 // fetchData から取得するストアに依存するため、初期値は空のままにし、fetchData で初期化する
 
+const apiUrl = ref('https://script.google.com/macros/s/AKfycbzijHcy9531MASML6qEpaYr24eHFsZN2lKTuvtYhRgnXQEtChzMTF7fJdotjoa3Dqj8iw/exec');
 const items = ref([])
 const stores = ref([])
 const newItemName = ref('')
@@ -24,8 +25,8 @@ async function fetchData() {
   isLoading.value = true;
   try {
     const [itemsRes, storesRes] = await Promise.all([
-      fetch(`/api?action=getItems`),
-      fetch(`/api?action=getStores`)
+      fetch(`${apiUrl.value}?action=getItems`),
+      fetch(`${apiUrl.value}?action=getStores`)
     ]);
 
     const itemsData = await itemsRes.json();
@@ -60,7 +61,7 @@ async function addItem() {
       return;
     }
     try {
-      const res = await fetch(`/api?action=addStore`, {
+      const res = await fetch(`${apiUrl.value}?action=addStore`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -87,7 +88,7 @@ async function addItem() {
   const newId = maxId + 1;
 
   try {
-    const res = await fetch(`/api?action=addItem`, {
+    const res = await fetch(`${apiUrl.value}?action=addItem`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -116,7 +117,7 @@ async function togglePurchased(id) {
   const item = items.value.find(item => item.id === id);
   if (item) {
     try {
-      const res = await fetch(`/api?action=updateItem`, {
+      const res = await fetch(`${apiUrl.value}?action=updateItem`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -141,7 +142,7 @@ async function togglePurchased(id) {
 
 async function removeItem(id) {
   try {
-    const res = await fetch(`/api?action=deleteItem`, {
+    const res = await fetch(`${apiUrl.value}?action=deleteItem`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
